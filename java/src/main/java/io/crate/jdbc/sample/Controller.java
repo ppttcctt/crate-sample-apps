@@ -18,108 +18,185 @@ import static spark.Spark.*;
 
 class Controller {
 
-    private final Gson gson = new GsonBuilder().serializeNulls().create();
+	private final Gson gson = new GsonBuilder().serializeNulls().create();
 
-    private static final int INTERNAL_ERROR = 500;
-    private static final int BAD_REQUEST = 400;
-    private static final int NOT_FOUND = 404;
+	private static final int INTERNAL_ERROR = 500;
+	private static final int BAD_REQUEST = 400;
+	private static final int NOT_FOUND = 404;
 
-    private static final int NO_CONTENT = 204;
-    private static final int CREATED = 201;
-    private static final int OK = 200;
+	private static final int NO_CONTENT = 204;
+	private static final int CREATED = 201;
+	private static final int OK = 200;
 
-    Controller(final DataProvider model) {
 
-        before(((request, response) -> {
-            response.header("Access-Control-Allow-Origin", "*");
-            response.header("Access-Control-Request-Method", "*");
-            response.header("Access-Control-Allow-Methods", "*");
-            response.header("Access-Control-Allow-Headers", "*");
-        }));
+	Controller(final DataProvider model) {
 
-        options("/*", (request, response) -> {
-            String accessControlRequestHeaders = request.headers("Access-Control-Request-Headers");
-            if (accessControlRequestHeaders != null) {
-                response.header("Access-Control-Allow-Headers", accessControlRequestHeaders);
-            }
+		before(((request, response) -> {
+			response.header("Access-Control-Allow-Origin", "*");
+			response.header("Access-Control-Request-Method", "*");
+			response.header("Access-Control-Allow-Methods", "*");
+			response.header("Access-Control-Allow-Headers", "*");
+		}));
 
-            String accessControlRequestMethod = request.headers("Access-Control-Request-Method");
-            if (accessControlRequestMethod != null) {
-                response.header("Access-Control-Allow-Methods", accessControlRequestMethod);
-            }
+		options("/*", (request, response) -> {
+			String accessControlRequestHeaders = request.headers("Access-Control-Request-Headers");
+			if (accessControlRequestHeaders != null) {
+				response.header("Access-Control-Allow-Headers", accessControlRequestHeaders);
+			}
+			
+			String accessControlRequestMethod = request.headers("Access-Control-Request-Method");
+			if (accessControlRequestMethod != null) {
+				response.header("Access-Control-Allow-Methods", accessControlRequestMethod);
+			}
 
-            response.status(OK);
-            return response;
-        });
+			response.status(OK);
+			return response;
+		});
 
-        get("/posts", (request, response) ->
-                model.getPosts(), gson::toJson);
 
-        post("/posts", (request, response) -> {
-            String body = request.body();
-            if (body.isEmpty()) {
-                return argumentRequired(response, "Request body is required");
-            }
+		//////////////////////////////////////////////////////
+		/////////////////// FACES ///////////////////////////
+		////////////////////////////////////////////////////
+		get("/faces", (request, response) ->
+		model.getFaces(), gson::toJson);
 
-            //noinspection unchecked
-            Map<String, Object> post = gson.fromJson(body, Map.class);
-            if (!post.containsKey("text")) {
-                return argumentRequired(response, "Argument \"text\" is required");
-            }
+		post("/faces", (request, response) -> {
+			String body = request.body();
+			if (body.isEmpty()) {
+				return argumentRequired(response, "Request body is required");
+			}
 
-            //noinspection unchecked
-            Map<String, Object> user = (Map) post.get("user");
-            if (!user.containsKey("location")) {
-                return argumentRequired(response, "Argument \"location\" is required");
-            }
-            response.status(CREATED);
-            return model.insertPost(post);
-        }, gson::toJson);
+			Face face = null;
+			try{
+				face = new Face(body);
+			}catch(FaceException e){								
+				return argumentRequired(response, e.getMessage());
+			}
 
-        get("/post/:id", (request, response) -> {
-            String id = request.params(":id");
-            Map<String, Object> post = model.getPost(id);
-            if (post.isEmpty()) {
-                return notFound(response, (String.format("Post with id=\"%s\" not found", id)));
-            }
-            response.status(OK);
-            return post;
-        }, gson::toJson);
+			response.status(CREATED);
+			return model.insertFace(face);			
 
-        put("/post/:id", (request, response) -> {
-            String body = request.body();
-            if (body.isEmpty()) {
-                return argumentRequired(response, "Request body is required");
-            }
+		}, gson::toJson);
 
-            //noinspection unchecked
-            Map<String, Object> post = gson.fromJson(body, Map.class);
-            if (!post.containsKey("text")) {
-                return argumentRequired(response, "Argument \"text\" is required");
-            }
+		get("/face/:id", (request, response) -> {
+			String id = request.params(":id");
+			Map<String, Object> face = model.getFace(id);
+			if (face.isEmpty()) {
+				return notFound(response, (String.format("Post with id=\"%s\" not found", id)));
+			}
+			response.status(OK);
+			return face;
+		}, gson::toJson);
 
-            String id = request.params(":id");
-            Map<String, Object> updatePost = model.updatePost(id, (String) post.get("text"));
-            if (updatePost.isEmpty()) {
-                return notFound(response, (String.format("Post with id=\"%s\" not found", id)));
-            }
-            response.status(OK);
-            return updatePost;
-        }, gson::toJson);
 
-        delete("/post/:id", (request, response) -> {
-            String id = request.params(":id");
-            if (model.deletePost(id)) {
-                response.status(NO_CONTENT);
-                return response;
-            } else {
-                return gson.toJson(
-                        notFound(response, String.format("Post with id=\"%s\" not found", id))
-                );
-            }
-        });
 
-        put("/post/:id/like", (request, response) -> {
+		/*put("/face/:id", (request, response) -> {
+			String body = request.body();
+			if (body.isEmpty()) {
+				return argumentRequired(response, "Request body is required");
+			}
+
+			//noinspection unchecked
+			Map<String, Object> post = gson.fromJson(body, Map.class);
+			if (!post.containsKey("text")) {
+				return argumentRequired(response, "Argument \"text\" is required");
+			}
+
+			String id = request.params(":id");
+			Map<String, Object> updatePost = model.updatePost(id, (String) post.get("text"));
+			if (updatePost.isEmpty()) {
+				return notFound(response, (String.format("Post with id=\"%s\" not found", id)));
+			}
+			response.status(OK);
+			return updatePost;
+		}, gson::toJson);*/
+
+		delete("/face/:id", (request, response) -> {
+			String id = request.params(":id");
+			if (model.deletePost(id)) {
+				response.status(NO_CONTENT);
+				return response;
+			} else {
+				return gson.toJson(
+						notFound(response, String.format("Face with id=\"%s\" not found", id))
+						);
+			}
+		});
+		////////////////////////////////////////////////////////
+
+
+		//////////////////////////////////////////////////////
+		/////////////////// FACES ///////////////////////////
+		////////////////////////////////////////////////////
+		get("/appearances", (request, response) ->
+		model.getAppearances(), gson::toJson);
+
+		post("/appearances", (request, response) -> {
+			String body = request.body();
+			if (body.isEmpty()) {
+				return argumentRequired(response, "Request body is required");
+			}
+
+			Appearance appearance = null;
+			try{
+				appearance = new Appearance(body);
+			}catch(AppearanceException e){								
+				return argumentRequired(response, e.getMessage());
+			}
+
+			response.status(CREATED);
+			return model.insertAppearance(appearance);			
+
+		}, gson::toJson);
+
+		get("/appearance/:id", (request, response) -> {
+			String id = request.params(":id");
+			Map<String, Object> appearance = model.getAppearance(id);
+			if (appearance.isEmpty()) {
+				return notFound(response, (String.format("Appearance with id=\"%s\" not found", id)));
+			}
+			response.status(OK);
+			return appearance;
+		}, gson::toJson);
+
+
+
+		/*put("/face/:id", (request, response) -> {
+String body = request.body();
+if (body.isEmpty()) {
+return argumentRequired(response, "Request body is required");
+}
+
+//noinspection unchecked
+Map<String, Object> post = gson.fromJson(body, Map.class);
+if (!post.containsKey("text")) {
+return argumentRequired(response, "Argument \"text\" is required");
+}
+
+String id = request.params(":id");
+Map<String, Object> updatePost = model.updatePost(id, (String) post.get("text"));
+if (updatePost.isEmpty()) {
+return notFound(response, (String.format("Post with id=\"%s\" not found", id)));
+}
+response.status(OK);
+return updatePost;
+}, gson::toJson);*/
+
+		delete("/appearance/:id", (request, response) -> {
+			String id = request.params(":id");
+			if (model.deletePost(id)) {
+				response.status(NO_CONTENT);
+				return response;
+			} else {
+				return gson.toJson(
+						notFound(response, String.format("Appearance with id=\"%s\" not found", id))
+						);
+			}
+		});
+		////////////////////////////////////////////////////////
+
+
+		/*put("/post/:id/like", (request, response) -> {
             String id = request.params(":id");
             Map<String, Object> post = model.incrementLike(id);
             if (post.isEmpty()) {
@@ -127,65 +204,66 @@ class Controller {
             }
             response.status(OK);
             return post;
-        }, gson::toJson);
+        }, gson::toJson);*/
 
-        get("/images", (request, response) -> model.getBlobs(), gson::toJson);
+		get("/images", (request, response) -> model.getBlobs(), gson::toJson);
 
-        post("/images", (request, response) -> {
-            String body = request.body();
-            if (body.isEmpty()) {
-                return argumentRequired(response, "Request body is required");
-            }
+		/*post("/images", (request, response) -> {
+			String body = request.body();
+			if (body.isEmpty()) {
+				return argumentRequired(response, "Request body is required");
+			}
 
-            //noinspection unchecked
-            Map<String, Object> blobMap = gson.fromJson(body, Map.class);
-            if (!blobMap.containsKey("blob")) {
-                return argumentRequired(response, "Argument \"blob\" is required");
-            }
+			//noinspection unchecked
+			Map<String, Object> blobMap = gson.fromJson(body, Map.class);
+			if (!blobMap.containsKey("blob")) {
+				return argumentRequired(response, "Argument \"blob\" is required");
+			}
 
-            byte[] decoded = Base64.getDecoder().decode((String) blobMap.get("blob"));
-            String digest = DigestUtils.shaHex(decoded);
-            Map<String, String> responseMap = model.insertBlob(digest, decoded);
+			// compute the 
+			byte[] decoded = Base64.getDecoder().decode((String) blobMap.get("blob"));
+			String digest = DigestUtils.shaHex(decoded);
+			Map<String, String> responseMap = model.insertBlob(digest, decoded);
 
-            response.status(Integer.parseInt(responseMap.get("status")));
-            return responseMap;
-        }, gson::toJson);
+			response.status(Integer.parseInt(responseMap.get("status")));
+			return responseMap;
+		}, gson::toJson);*/
 
-        get("/image/:digest", (request, response) -> {
-            String digest = request.params(":digest");
-            if (model.blobExists(digest)) {
-                HttpResponse httpResponse = model.getBlob(digest);
+		get("/image/:digest", (request, response) -> {
+			String digest = request.params(":digest");
+			if (model.blobExists(digest)) {
+				HttpResponse httpResponse = model.getBlob(digest);
 
-                response.status(httpResponse.getStatusLine().getStatusCode());
-                response.header("Content-Type", "image/gif");
-                response.header("Content-Length", httpResponse.getFirstHeader("Content-Length").getValue());
+				response.status(httpResponse.getStatusLine().getStatusCode());
+				response.header("Content-Type", "image/gif");
+				response.header("Content-Length", httpResponse.getFirstHeader("Content-Length").getValue());
 
-                InputStream in = httpResponse.getEntity().getContent();
-                OutputStream out = response.raw().getOutputStream();
-                IOUtils.copy(in, out);
+				InputStream in = httpResponse.getEntity().getContent();
+				OutputStream out = response.raw().getOutputStream();
+				IOUtils.copy(in, out);
 
-                return response;
-            } else {
-                return gson.toJson(
-                        notFound(response, String.format("Image with digest=\"%s\" not found", digest))
-                );
-            }
-        });
+				return response;
+			} else {
+				return gson.toJson(
+						notFound(response, String.format("Image with digest=\"%s\" not found", digest))
+						);
+			}
+		});
 
-        delete("/image/:digest", (request, response) -> {
-            String digest = request.params(":digest");
-            if (model.blobExists(digest)) {
-                HttpResponse httpResponse = model.deleteBlob(digest);
-                response.status(httpResponse.getStatusLine().getStatusCode());
-                return response;
-            } else {
-                return gson.toJson(
-                        notFound(response, String.format("Image with digest=\"%s\" not found", digest))
-                );
-            }
-        });
+		/*delete("/image/:digest", (request, response) -> {
+			String digest = request.params(":digest");
+			if (model.blobExists(digest)) {
+				HttpResponse httpResponse = model.deleteBlob(digest);
+				response.status(httpResponse.getStatusLine().getStatusCode());
+				return response;
+			} else {
+				return gson.toJson(
+						notFound(response, String.format("Image with digest=\"%s\" not found", digest))
+						);
+			}
+		});*/
 
-        post("/search", (request, response) -> {
+		/* post("/search", (request, response) -> {
             String body = request.body();
             if (body.isEmpty()) {
                 return argumentRequired(response, "Request body is required");
@@ -197,27 +275,27 @@ class Controller {
                 return argumentRequired(response, "Argument \"query_string\" is required");
             }
             return model.searchPosts((String) bodyMap.get("query_string"));
-        }, gson::toJson);
+        }, gson::toJson);*/
 
-        exception(SQLException.class, (e, request, response) -> {
-            response.status(INTERNAL_ERROR);
-            response.body(e.getLocalizedMessage());
-        });
-    }
+		exception(SQLException.class, (e, request, response) -> {
+			response.status(INTERNAL_ERROR);
+			response.body(e.getLocalizedMessage());
+		});
+	}
 
-    private Map<String, Object> notFound(Response response, String msg) {
-        return errorResponse(response, msg, NOT_FOUND);
-    }
+	private Map<String, Object> notFound(Response response, String msg) {
+		return errorResponse(response, msg, NOT_FOUND);
+	}
 
-    private Map<String, Object> argumentRequired(Response response, String msg) {
-        return errorResponse(response, msg, BAD_REQUEST);
-    }
+	private Map<String, Object> argumentRequired(Response response, String msg) {
+		return errorResponse(response, msg, BAD_REQUEST);
+	}
 
-    private Map<String, Object> errorResponse(Response response, String msg, int code) {
-        response.status(code);
-        Map<String, Object> responseMap = new HashMap<>();
-        responseMap.put("status", code);
-        responseMap.put("error", msg);
-        return responseMap;
-    }
+	private Map<String, Object> errorResponse(Response response, String msg, int code) {
+		response.status(code);
+		Map<String, Object> responseMap = new HashMap<>();
+		responseMap.put("status", code);
+		responseMap.put("error", msg);
+		return responseMap;
+	}
 }

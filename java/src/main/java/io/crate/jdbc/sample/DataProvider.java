@@ -18,9 +18,9 @@ import java.util.*;
 
 class DataProvider {
 
-    private static final String POST_TABLE = "guestbook.posts";
-    private static final String COUNTRIES_TABLE = "guestbook.countries";
-    private static final String IMAGE_TABLE = "guestbook_images";
+    private static final String FACE_TABLE = "mind.faces";
+    private static final String APPEARANCE_TABLE = "mind.appearances";
+    private static final String IMAGE_TABLE = "mind_images";
 
     private final Gson gson = new Gson();
 
@@ -60,23 +60,38 @@ class DataProvider {
         }
         return properties;
     }
+    
+    
+    
+    // Get all the appearances
+    List<Map<String, Object>> getAppearances() throws SQLException {
+            	
+    	PreparedStatement statement = connection.prepareStatement(String.format(
+                "SELECT a.* " +
+                "FROM %s AS a", APPEARANCE_TABLE));// +
+                //"ORDER BY f.timestamp DESC", FACE_TABLE));
+        ResultSet rs = statement.executeQuery();
+        return resultSetToListOfMaps(rs);
+    }
+    
 
-    List<Map<String, Object>> getPosts() throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(String.format(
-                "SELECT p.*, c.name as country, c.geometry as area " +
-                "FROM %s AS p, %s AS c " +
-                "WHERE within(p.user['location'], c.geometry)" +
-                "ORDER BY p.created DESC", POST_TABLE, COUNTRIES_TABLE));
+    // Get all the faces
+    List<Map<String, Object>> getFaces() throws SQLException {
+            	
+    	PreparedStatement statement = connection.prepareStatement(String.format(
+                "SELECT f.* " +
+                "FROM %s AS f", FACE_TABLE));// +
+                //"ORDER BY f.timestamp DESC", FACE_TABLE));
         ResultSet rs = statement.executeQuery();
         return resultSetToListOfMaps(rs);
     }
 
     private List<Map<String, Object>> resultSetToListOfMaps(ResultSet rs) throws SQLException {
-        List<Map<String, Object>> posts = new ArrayList<>();
+        List<Map<String, Object>> faces = new ArrayList<>();
         while (rs.next()) {
-            posts.add(resultSetToMap.apply(rs));
+            faces.add(resultSetToMap.apply(rs));
         }
-        return posts;
+        return faces;
     }
 
     private final CheckedFunction<ResultSet, Map<String, Object>> resultSetToMap = rs -> {
@@ -90,12 +105,12 @@ class DataProvider {
         return map;
     };
 
-    Map<String, Object> getPost(String id) throws SQLException {
+    // Get a face by its id
+    Map<String, Object> getFace(String id) throws SQLException {
         PreparedStatement statement = connection.prepareStatement(String.format(
-                "SELECT p.*, c.name as country, c.geometry as area " +
-                "FROM %s AS p, %s AS c " +
-                "WHERE within(p.user['location'], c.geometry) " +
-                "AND p.id = ?", POST_TABLE, COUNTRIES_TABLE));
+                "SELECT f.* " +
+                "FROM %s AS f" +
+                "WHERE f.id = ?", FACE_TABLE));
         statement.setString(1, id);
         ResultSet results = statement.executeQuery();
         if (results.next()) {
@@ -104,65 +119,152 @@ class DataProvider {
             return Collections.emptyMap();
         }
     }
-
-    List<Map<String, Object>> insertPost(Map<String, Object> post) throws SQLException {
+    
+    
+    
+    // Get a face by its id
+    Map<String, Object> getAppearance(String id) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(String.format(
+                "SELECT a.* " +
+                "FROM %s AS a" +
+                "WHERE a.id = ?", APPEARANCE_TABLE));
+        statement.setString(1, id);
+        ResultSet results = statement.executeQuery();
+        if (results.next()) {
+            return resultSetToMap.apply(results);
+        } else {
+            return Collections.emptyMap();
+        }
+    }
+    
+    
+    // insert a new face
+    List<Map<String, Object>> insertFace(Face face) throws SQLException {
         PreparedStatement statement = connection.prepareStatement(String.format(
                 "INSERT INTO %s " +
-                "(id, user, text, image_ref, created, like_count) " +
-                "VALUES (?, ?, ?, ?, ?, ?)", POST_TABLE));
+                "(id, featureData, timestamp, isMedoid, appearanceUUID, faceUUID, identityUUID, label, importance) " +
+                "VALUES (?, ?, ?, ?,?, ?,?, ?,?)", FACE_TABLE));
 
-        String id = UUID.randomUUID().toString();
-        statement.setString(1, id);
+        
+        // 
+        statement.setString(1, face.getId());
 
         // objects can be streamed as json strings,
         // https://crate.io/docs/reference/en/latest/protocols/postgres.html#jdbc
-        PGobject userObject = new PGobject();
+        /*PGobject userObject = new PGobject();
         userObject.setType("json");
         userObject.setValue(gson.toJson(post.get("user")));
-        statement.setObject(2, userObject);
+        statement.setObject(2, userObject);*/
+        
+        statement.setString(2, face.getFeatureData());
+        statement.setLong(3, face.getTimestamp());
+        statement.setBoolean(4, face.isMedoid());
+        statement.setString(5, face.getAppearanceUUID());
+        statement.setString(6, face.getFaceUUID());
+        statement.setString(7, face.getIdentityUUID());
+        statement.setString(8, face.getLabel());
+        statement.setInt(9, face.getImportance());
+        
+        System.out.println("Sono ARRIVATO PRIMA INSERIMENTO FACE");
+     
+        try {
+			insertBlob(face.getId(), face.getData());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
-        statement.setString(3, (String) post.get("text"));
+        /*statement.setString(3, (String) post.get("text"));
         statement.setString(4, (String) post.get("image_ref"));
         statement.setLong(5, System.currentTimeMillis());
-        statement.setLong(6, 0);
+        statement.setLong(6, 0);*/
+        
         if (statement.executeUpdate() == 0) {
             return Collections.emptyList();
         }
-        connection.createStatement().execute(String.format("REFRESH TABLE %s", POST_TABLE));
-        return Collections.singletonList(getPost(id));
+        
+        connection.createStatement().execute(String.format("REFRESH TABLE %s", FACE_TABLE));
+        return Collections.singletonList(getFace(face.getId()));
     }
+    
+    
+    
+    
+    // insert a new appearance
+    List<Map<String, Object>> insertAppearance(Appearance appearance) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(String.format(
+                "INSERT INTO %s " +
+                "(id, featureData, timestamp, isMedoid, appearanceUUID, faceUUID, identityUUID, label) " +
+                "VALUES (?, ?, ?, ?,?, ?,?, ?)", FACE_TABLE));
 
-    Map<String, Object> updatePost(String id, String val) throws SQLException {
+        
+        // 
+        statement.setString(1, appearance.getId());
+
+        // objects can be streamed as json strings,
+        // https://crate.io/docs/reference/en/latest/protocols/postgres.html#jdbc
+        /*PGobject userObject = new PGobject();
+        userObject.setType("json");
+        userObject.setValue(gson.toJson(post.get("user")));
+        statement.setObject(2, userObject);*/
+        
+        statement.setString(2, appearance.getFeatureData());
+        statement.setLong(3, appearance.getTimestamp());
+        statement.setBoolean(4, appearance.isMedoid());
+        statement.setString(5, appearance.getAppearanceUUID());
+        statement.setString(6, appearance.getFaceUUID());
+        statement.setString(7, appearance.getIdentityUUID());
+        statement.setString(8, appearance.getLabel());
+         
+        
+        try {
+			insertBlob(appearance.getId(), appearance.getData());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+       
+        if (statement.executeUpdate() == 0) {
+            return Collections.emptyList();
+        }
+        
+        connection.createStatement().execute(String.format("REFRESH TABLE %s", FACE_TABLE));
+        return Collections.singletonList(getFace(appearance.getId()));
+    }
+    
+
+    /*Map<String, Object> updatePost(String id, String val) throws SQLException {
         PreparedStatement statement = connection.prepareStatement(String.format(
                 "UPDATE %s " +
                 "SET text = ? " +
-                "WHERE id = ?", POST_TABLE));
+                "WHERE id = ?", FACE_TABLE));
         statement.setString(1, val);
         statement.setString(2, id);
         if (statement.executeUpdate() == 0) {
             return Collections.emptyMap();
         }
-        connection.createStatement().execute(String.format("REFRESH TABLE %s", POST_TABLE));
-        return getPost(id);
-    }
+        connection.createStatement().execute(String.format("REFRESH TABLE %s", FACE_TABLE));
+        return getFace(id);
+    }*/
 
-    Map<String, Object> incrementLike(String id) throws SQLException {
+    /*Map<String, Object> incrementLike(String id) throws SQLException {
         PreparedStatement statement = connection.prepareStatement(String.format(
                 "UPDATE %s " +
                 "SET like_count = like_count + 1 " +
-                "WHERE id = ?", POST_TABLE));
+                "WHERE id = ?", FACE_TABLE));
         statement.setString(1, id);
         if (statement.executeUpdate() == 0) {
             return Collections.emptyMap();
         }
-        connection.createStatement().execute(String.format("REFRESH TABLE %s", POST_TABLE));
+        connection.createStatement().execute(String.format("REFRESH TABLE %s", FACE_TABLE));
         return getPost(id);
-    }
+    }*/
 
     boolean deletePost(String id) throws SQLException {
         PreparedStatement statement = connection.prepareStatement(String.format(
                 "DELETE FROM %s " +
-                "WHERE id = ?", POST_TABLE));
+                "WHERE id = ?", FACE_TABLE));
         statement.setString(1, id);
         return statement.executeUpdate() == 1;
     }
@@ -214,17 +316,17 @@ class DataProvider {
         return String.format(Locale.ENGLISH, "%s/%s", index, digest);
     }
 
-    List<Map<String, Object>> searchPosts(String query) throws SQLException {
+    /*List<Map<String, Object>> searchPosts(String query) throws SQLException {
         PreparedStatement statement = connection.prepareStatement(String.format(
                 "SELECT p.*, p._score as _score, c.name as country, c.geometry as area " +
                 "FROM %s AS p, %s AS c " +
                 "WHERE within(p.user['location'], c.geometry)" +
                 "AND match(text, ?) " +
-                "ORDER BY _score DESC", POST_TABLE, COUNTRIES_TABLE));
+                "ORDER BY _score DESC", FACE_TABLE, COUNTRIES_TABLE));
         statement.setString(1, query);
         ResultSet results = statement.executeQuery();
         return resultSetToListOfMaps(results);
-    }
+    }*/
 
     @FunctionalInterface
     interface CheckedFunction<T, R> {
