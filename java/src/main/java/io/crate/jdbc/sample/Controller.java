@@ -4,7 +4,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.HttpResponse;
+import org.eclipse.jetty.util.log.Log;
+
 import spark.Response;
+import spark.Spark;
 import spark.utils.IOUtils;
 
 import java.io.InputStream;
@@ -13,6 +16,8 @@ import java.sql.SQLException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
 
 import static spark.Spark.*;
 
@@ -28,8 +33,15 @@ class Controller {
 	private static final int CREATED = 201;
 	private static final int OK = 200;
 
+	Logger logger = Logger.getLogger("MyLog");  
+    FileHandler fh;  
 
-	Controller(final DataProvider model) {
+	Controller(final DataProvider model) {		
+		
+		Spark.exception(Exception.class, (exception, request, response) -> {
+			exception.getMessage();
+		    exception.printStackTrace();
+		});
 
 		before(((request, response) -> {
 			response.header("Access-Control-Allow-Origin", "*");
@@ -72,7 +84,7 @@ class Controller {
 			}catch(FaceException e){								
 				return argumentRequired(response, e.getMessage());
 			}
-
+			
 			response.status(CREATED);
 			return model.insertFace(face);			
 
@@ -206,9 +218,13 @@ return updatePost;
             return post;
         }, gson::toJson);*/
 
-		get("/images", (request, response) -> model.getBlobs(), gson::toJson);
+		get("/face_images", (request, response) -> model.getBlobs(DataProvider.FACE_BLOB), gson::toJson);
+		
+		get("/appearance_images", (request, response) -> model.getBlobs(DataProvider.APPEARANCE_BLOB), gson::toJson);
+		
+		//post("/images", (request, response) -> model.getBlobs(), gson::toJson);
 
-		/*post("/images", (request, response) -> {
+		/*post("/image", (request, response) -> {
 			String body = request.body();
 			if (body.isEmpty()) {
 				return argumentRequired(response, "Request body is required");
@@ -229,10 +245,32 @@ return updatePost;
 			return responseMap;
 		}, gson::toJson);*/
 
-		get("/image/:digest", (request, response) -> {
+		get("/face_image/:digest", (request, response) -> {
 			String digest = request.params(":digest");
-			if (model.blobExists(digest)) {
-				HttpResponse httpResponse = model.getBlob(digest);
+			if (model.blobExists(digest, DataProvider.FACE_BLOB)) {
+				HttpResponse httpResponse = model.getBlob(digest,DataProvider.FACE_BLOB);
+
+				response.status(httpResponse.getStatusLine().getStatusCode());
+				response.header("Content-Type", "image/gif");
+				response.header("Content-Length", httpResponse.getFirstHeader("Content-Length").getValue());
+
+				InputStream in = httpResponse.getEntity().getContent();
+				OutputStream out = response.raw().getOutputStream();
+				IOUtils.copy(in, out);
+
+				return response;
+			} else {
+				return gson.toJson(
+						notFound(response, String.format("Image with digest=\"%s\" not found", digest))
+						);
+			}
+		});
+		
+		
+		get("/appearances_image/:digest", (request, response) -> {
+			String digest = request.params(":digest");
+			if (model.blobExists(digest, DataProvider.APPEARANCE_BLOB)) {
+				HttpResponse httpResponse = model.getBlob(digest,DataProvider.APPEARANCE_BLOB);
 
 				response.status(httpResponse.getStatusLine().getStatusCode());
 				response.header("Content-Type", "image/gif");
@@ -298,4 +336,6 @@ return updatePost;
 		responseMap.put("error", msg);
 		return responseMap;
 	}
+	
+	
 }

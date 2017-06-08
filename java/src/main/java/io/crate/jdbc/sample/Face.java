@@ -26,12 +26,12 @@ public class Face extends ImageData{
 	private String appearanceUUID;
 	private String faceUUID;
 	private String identityUUID;
-	private String label;
+	private int label;
 	private int importance;
 	
 	
 	public Face(String featureData, long timestamp, boolean isMedoid, String appearanceUUID, String faceUUID,
-			String identityUUID, String label, int importance, String data) {
+			String identityUUID, int label, int importance, String data) throws FaceException{
 		super(faceUUID, data);
 		
 		// Generate 
@@ -106,12 +106,12 @@ public class Face extends ImageData{
 		
 		String featureData = (String) faceMap.get(JSON_FACE_FEATUREDATA);
 		long timestamp = Long.parseLong( (String) faceMap.get(JSON_FACE_TIMESTAMP), 10);
-		boolean isMedoid = ((int) faceMap.get(JSON_FACE_ISMEDOID)==1)?true:false;
+		boolean isMedoid = (((double) faceMap.get(JSON_FACE_ISMEDOID))==1)?true:false;
 		String appearanceUUID  = (String) faceMap.get(JSON_FACE_APPAREANCEUUID);
 		String faceUUID = (String) faceMap.get(JSON_FACE_FACEUUID);
 		String identityUUID = (String) faceMap.get(JSON_FACE_IDENTITYUUID);
-		String label = (String) faceMap.get(JSON_FACE_LABEL);
-		int importance = (int) faceMap.get(JSON_FACE_IMPORTANCE);
+		int label = ((Double) faceMap.get(JSON_FACE_LABEL)).intValue();
+		int importance = ((Double) faceMap.get(JSON_FACE_IMPORTANCE)).intValue();
 		String data = (String) faceMap.get(JSON_FACE_IMAGEDATA);
 		
 		this.id = UUID.randomUUID().toString();
@@ -124,7 +124,8 @@ public class Face extends ImageData{
 		this.label = label;
 		this.importance = importance;
 		
-		this.setData(data);	
+		this.setDataString(data);
+		
 	}
 	
 	public String getId() {
@@ -169,10 +170,10 @@ public class Face extends ImageData{
 	public void setIdentityUUID(String identityUUID) {
 		this.identityUUID = identityUUID;
 	}
-	public String getLabel() {
+	public int getLabel() {
 		return label;
 	}
-	public void setLabel(String label) {
+	public void setLabel(int label) {
 		this.label = label;
 	}
 	public int getImportance() {

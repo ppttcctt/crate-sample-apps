@@ -14,7 +14,6 @@ public class Appearance extends ImageData{
 	private static final String JSON_APPEARANCE_TIMESTAMP = "timestamp";
 	private static final String JSON_APPEARANCE_ISMEDOID = "isMedoid";
 	private static final String JSON_APPEARANCE_APPAREANCEUUID = "appearanceUUID";
-	private static final String JSON_APPEARANCE_FACEUUID = "faceUUID";
 	private static final String JSON_APPEARANCE_IDENTITYUUID = "identityUUID";
 	private static final String JSON_APPEARANCE_LABEL = "label";
 
@@ -24,35 +23,33 @@ public class Appearance extends ImageData{
 	private long timestamp;
 	private boolean isMedoid;
 	private String appearanceUUID;
-	private String faceUUID;
 	private String identityUUID;
-	private String label;
-	
-	
-	public Appearance(long id, String featureData, long timestamp, boolean isMedoid, String appearanceUUID, String faceUUID,
-			String identityUUID, String label, String data) {
-super(faceUUID, data);
-		
+	private int label;
+
+
+	public Appearance(long id, String featureData, long timestamp, boolean isMedoid, String appearanceUUID,
+			String identityUUID, int label, String data) throws FaceException {
+		super(appearanceUUID, data);
+
 		// Generate 
 		this.id = UUID.randomUUID().toString();
 		this.featureData = featureData;
 		this.timestamp = timestamp;
 		this.isMedoid = isMedoid;
 		this.appearanceUUID = appearanceUUID;
-		this.faceUUID = faceUUID;
 		this.identityUUID = identityUUID;
 		this.label = label;
 	}
-	
-public Appearance(String jsonS) throws AppearanceException{
-		
+
+	public Appearance(String jsonS) throws AppearanceException{
+
 		Gson gson = new GsonBuilder().serializeNulls().create();
-		
+
 		Map<String, Object> faceMap = gson.fromJson(jsonS, Map.class);
-		
+
 		boolean throwExecption = false;
 		AppearanceException fe= new AppearanceException();
-		
+
 		if (!faceMap.containsKey(JSON_APPEARANCE_FEATUREDATA)) {
 			throwExecption = true;
 			fe.setFeatureData(true);
@@ -69,10 +66,6 @@ public Appearance(String jsonS) throws AppearanceException{
 			throwExecption = true;
 			fe.setAppearanceUUID(true);
 		}
-		if (!faceMap.containsKey(JSON_APPEARANCE_FACEUUID)) {
-			throwExecption = true;
-			fe.setFaceUUID(true);
-		}
 		if (!faceMap.containsKey(JSON_APPEARANCE_IDENTITYUUID)) {
 			throwExecption = true;
 			fe.setIdentityUUID(true);
@@ -81,34 +74,32 @@ public Appearance(String jsonS) throws AppearanceException{
 			throwExecption = true;
 			fe.setLabel(true);
 		}
-		
+
 		if (!faceMap.containsKey(JSON_APPEARANCE_IMAGEDATA)) {
 			throwExecption = true;
 			fe.setImageData(true);
 		}
-		
+
 		if(throwExecption)
 			throw fe;
-		
+
 		String featureData = (String) faceMap.get(JSON_APPEARANCE_FEATUREDATA);
 		long timestamp = Long.parseLong( (String) faceMap.get(JSON_APPEARANCE_TIMESTAMP), 10);
-		boolean isMedoid = ((int) faceMap.get(JSON_APPEARANCE_ISMEDOID)==1)?true:false;
+		boolean isMedoid = (((double) faceMap.get(JSON_APPEARANCE_ISMEDOID))==1)?true:false;
 		String appearanceUUID  = (String) faceMap.get(JSON_APPEARANCE_APPAREANCEUUID);
-		String faceUUID = (String) faceMap.get(JSON_APPEARANCE_FACEUUID);
 		String identityUUID = (String) faceMap.get(JSON_APPEARANCE_IDENTITYUUID);
-		String label = (String) faceMap.get(JSON_APPEARANCE_LABEL);
+		int label = ((Double) faceMap.get(JSON_APPEARANCE_LABEL)).intValue();
 		String data = (String) faceMap.get(JSON_APPEARANCE_IMAGEDATA);
-		
+
 		this.id = UUID.randomUUID().toString();
 		this.featureData = featureData;
 		this.timestamp = timestamp;
 		this.isMedoid = isMedoid;
 		this.appearanceUUID = appearanceUUID;
-		this.faceUUID = faceUUID;
 		this.identityUUID = identityUUID;
 		this.label = label;
-				
-		this.setData(data);	
+
+		this.setDataString(data);	
 	}
 
 	public String getId() {
@@ -141,27 +132,21 @@ public Appearance(String jsonS) throws AppearanceException{
 	public void setAppearanceUUID(String appearanceUUID) {
 		this.appearanceUUID = appearanceUUID;
 	}
-	public String getFaceUUID() {
-		return faceUUID;
-	}
-	public void setFaceUUID(String faceUUID) {
-		this.faceUUID = faceUUID;
-	}
 	public String getIdentityUUID() {
 		return identityUUID;
 	}
 	public void setIdentityUUID(String identityUUID) {
 		this.identityUUID = identityUUID;
 	}
-	public String getLabel() {
+	public int getLabel() {
 		return label;
 	}
-	public void setLabel(String label) {
+	public void setLabel(int label) {
 		this.label = label;
 	}
-	
+
 	// TODO: parseJson
 	/*public void parseJson(){
-	
+
 	}*/
 }

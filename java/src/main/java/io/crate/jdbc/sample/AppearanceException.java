@@ -7,7 +7,6 @@ class AppearanceException extends Exception
 	private boolean timestamp;
 	private boolean isMedoid;
 	private boolean appearanceUUID;
-	private boolean faceUUID;
 	private boolean identityUUID;
 	private boolean label;	
 	private boolean imageData;
@@ -21,7 +20,6 @@ class AppearanceException extends Exception
 		timestamp = false;
 		isMedoid = false;
 		appearanceUUID = false;
-		faceUUID = false;
 		identityUUID = false;
 		label = false;
 		imageData = false;
@@ -36,7 +34,6 @@ class AppearanceException extends Exception
 		timestamp = false;
 		isMedoid = false;
 		appearanceUUID = false;
-		faceUUID = false;
 		identityUUID = false;
 		label = false;
 		imageData = false;
@@ -82,14 +79,6 @@ class AppearanceException extends Exception
 		this.appearanceUUID = appearanceUUID;
 	}
 
-	public boolean isFaceUUID() {
-		return faceUUID;
-	}
-
-	public void setFaceUUID(boolean faceUUID) {
-		this.faceUUID = faceUUID;
-	}
-
 	public boolean isIdentityUUID() {
 		return identityUUID;
 	}
@@ -118,8 +107,6 @@ class AppearanceException extends Exception
 				errorS += "Argument \"isMedoid\" \n";
 			if(appearanceUUID)
 				errorS += "Argument \"appearanceUUID\" \n";
-			if(faceUUID)
-				errorS += "Argument \"faceUUID\" \n";
 			if(identityUUID)
 				errorS += "Argument \"identityUUID\" \n";
 			if(label)
